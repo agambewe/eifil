@@ -21,9 +21,9 @@ class ArticleSeeder extends Seeder
                     'description' => $faker->text,
                     'id_category' => $faker->numberBetween(1,5),
                     'id_author' => $faker->numberBetween(1,5),
-                    'hastag' => $faker->randomElement($array = array ("#covid", "#india", "#student")),
-                    'created_at' => date("Y-m-d H:i:s"),
-                    'updated_at' => date("Y-m-d H:i:s")
+                    'hashtag' => $faker->randomElement($array = array ("#covid,#india", "#india", "#student,#malay")),
+                    'created_at' => Carbon\Carbon::now(),
+                    'updated_at' => Carbon\Carbon::now()
             ]);
         endfor;
     }

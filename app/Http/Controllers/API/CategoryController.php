@@ -11,22 +11,81 @@ use Validator;
 class CategoryController extends Controller
 {
     public function __construct() {
-        $this->middleware('auth:api');
+        $this->middleware('auth:api', ['except' => ['show', 'find']]);
     }
     
     public function show()
     {
         return Category::all();
     }
+
+    public function trash()
+    {
+        return Category::onlyTrashed()->get();
+    }
+
+    public function trashFind($id){
+        $category = Category::onlyTrashed()->where('id',$id);
+
+        if (is_null($category)){
+            $res['message'] = "Failed!";
+            return response($res);
+        }else{
+            if($category->restore()){
+                $res['message'] = "Data has been successfully restored!";
+                $res['data'] = $category;
+                return response($res);
+            }else{
+                $res['errors'] = "Failed!";
+                return response($res);
+            }
+        }
+    }
+
+    public function trashRestore(){
+        $category = Category::onlyTrashed();
+
+        if (is_null($category)){
+            $res['message'] = "Failed!";
+            return response($res);
+        }else{
+            if($category->restore()){
+                $res['message'] = "Data has been successfully restored!";
+                $res['data'] = $category;
+                return response($res);
+            }else{
+                $res['errors'] = "Failed!";
+                return response($res);
+            }
+        }
+    }
     
+    public function trashEmpty(){
+        $category = Category::onlyTrashed();
+
+        if (is_null($category)){
+            $res['errors'] = "Failed!";
+            return response($res);
+        }else{
+            if($category->forceDelete()){
+                $res['message'] = "Data has been successfully deleted!";
+                $res['data'] = $category;
+                return response($res);
+            }else{
+                $res['errors'] = "Failed!";
+                return response($res);
+            }
+        }
+    }
+
     public function find($id){
         $data = Category::find($id);
 
         if (is_null($data)){
-            $res['message'] = "Failed!";
+            $res['errors'] = "Failed!";
             return response($res);
         }else{
-            $res['message'] = "Success!";
+            $res['message'] = "Data has been successfully fetched!";
             $res['data'] = $data;
             return response($res);
         }
@@ -37,21 +96,21 @@ class CategoryController extends Controller
         $input_data = $request->all();
 
         $validation = Validator::make($input_data, [
-            'name' => 'required'
+            'name' => 'required|unique:categories'
         ]);
 
         if ($validation->fails()) {
-            return response()->json(['errors' => $validation->errors()], 422);
+            return response()->json(['errors' => $validation->errors()], 400);
         }
 
         $category = new Category();     
         $category->name = $input_data['name'];
 
         if($category->save()){
-            $res['message'] = "Successfully create!";
+            $res['message'] = "Data has been successfully created!";
             return response($res);
         }else{
-            $res['message'] = "Create failed!";
+            $res['errors'] = "Failed!";
             return response($res);
         }
     }
@@ -60,8 +119,10 @@ class CategoryController extends Controller
     {
         $input_data = $request->all();
 
+        $data = Category::where('id',$id)->first();
+
         $validation = Validator::make($input_data, [
-            'name' => 'required'
+            'name' => ['required', Rule::unique('categories')->ignore($data)],
         ]);
 
         if ($validation->fails()) {
@@ -73,24 +134,92 @@ class CategoryController extends Controller
         $data->name = $name;
 
         if($data->save()){
-            $res['message'] = "Successfully!";
+            $res['message'] = "Data has been successfully updated!";
             return response($res);
         }else{
-            $res['message'] = "Failed!";
+            $res['errors'] = "Failed!";
             return response($res);
         }
     }
 
     public function delete(Request $request, $id)
     {
-        $data = Category::where('id',$id)->first();
+        
+        $category = Category::has('articles')->find($id);
+        if($category){
+            $res['message'] = "Category has been used on article!";
+            return response($res);
+        }
 
+        $data = Category::where('id',$id)->first();
         if($data->delete()){
-            $res['message'] = "Successfully!";
+            $res['message'] = "Data has been successfully deleted!";
             return response($res);
         }
         else{
-            $res['message'] = "Failed!";
+            $res['errors'] = "Failed!";
+            return response($res);
+        }
+    }
+
+    public function trashDelete(Request $request, $id)
+    {
+        $data = Category::onlyTrashed()->where('id',$id)->first();
+
+        if($data->forceDelete()){
+            $res['message'] = "Data has been successfully deleted!";
+            return response($res);
+        }
+        else{
+            $res['errors'] = "Failed!";
+            return response($res);
+        }
+    }
+
+    public function multipleDelete(Request $request)
+    {
+        $this->validate($request, [
+            'id' => 'required',
+        ]);
+
+        $checked = $request->input('id');
+
+        foreach ($checked as $relationCheck) {
+            $relations = Category::has('articles')->find($relationCheck);
+            if($relations){
+                $res['message'] = "Category has been used on article!";
+                return response($res);
+            }
+        }
+
+        if(Category::destroy($checked)){
+            $res['message'] = "Data has been successfully deleted!";
+            return response($res);
+        }
+        else{
+            $res['errors'] = "Failed!";
+            return response($res);
+        }
+    }
+
+    public function multipleDeleteTrash(Request $request)
+    {
+        $validation = Validator::make($request->all(), [
+            'id' => 'required',
+        ]);
+
+        $checked = $request->input('id');
+
+        $forceDelete = Category::onlyTrashed()
+                ->whereIn('id', $checked)
+                ->forceDelete();
+
+        if($forceDelete){
+            $res['message'] = "Data has been successfully deleted!";
+            return response($res);
+        }
+        else{
+            $res['errors'] = "Failed!";
             return response($res);
         }
     }

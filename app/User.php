@@ -5,6 +5,7 @@ namespace App;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Carbon\Carbon;
 
 // JWT
 use Tymon\JWTAuth\Contracts\JWTSubject;
@@ -57,4 +58,17 @@ class User extends Authenticatable implements JWTSubject {
     public function getJWTCustomClaims() {
         return [];
     }
+
+    public function getCreatedAtAttribute(){
+        if(!is_null($this->attributes['created_at'])){
+            return Carbon::parse($this->attributes['created_at'])->format('Y-m-d H:i:s');
+        }
+    }
+
+    public function getUpdatedAtAttribute(){
+        if(!is_null($this->attributes['updated_at'])){
+            return Carbon::parse($this->attributes['updated_at'])->format('Y-m-d H:i:s');
+        }
+    }
+    
 }

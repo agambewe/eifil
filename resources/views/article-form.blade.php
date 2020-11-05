@@ -106,12 +106,13 @@
             menubar: true
         },
         // upload image functionality
-        images_upload_url: '/api/article/img-upload',
+        images_upload_url: 'http://api.eifil-indonesia.org/api/V1/img-upload',
         images_upload_handler: function (blobInfo, success, failure) {
             var xhr, formData;
             xhr = new XMLHttpRequest();
             xhr.withCredentials = true;
-            xhr.open('POST', '/api/article/img-upload');
+            xhr.open('POST', 'http://api.eifil-indonesia.org/api/V1/img-upload');
+            xhr.setRequestHeader('Authorization', 'Bearer ' + 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOlwvXC9hcGkuZWlmaWwtaW5kb25lc2lhLm9yZ1wvYXBpXC9WMVwvbG9naW4iLCJpYXQiOjE2MDI1MjgyMjIsImV4cCI6MTYwMjUzMTgyMiwibmJmIjoxNjAyNTI4MjIyLCJqdGkiOiJjZ0xYUmJDWXJHM3IzakF6Iiwic3ViIjoxLCJwcnYiOiI4N2UwYWYxZWY5ZmQxNTgxMmZkZWM5NzE1M2ExNGUwYjA0NzU0NmFhIn0.5EmmNdzxeLoJLvJvsZMrknXF5erGxjag2LyEcOmxsgk');
             xhr.onload = function() {
                 var json;
                 if (xhr.status != 200) {

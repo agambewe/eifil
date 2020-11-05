@@ -18,8 +18,8 @@ class AuthorSeeder extends Seeder
             DB::table('authors')
                 ->insert([
                     'name' => $faker->name,
-                    'created_at' => date("Y-m-d H:i:s"),
-                    'updated_at' => date("Y-m-d H:i:s")
+                    'created_at' => Carbon\Carbon::now(),
+                    'updated_at' => Carbon\Carbon::now()
             ]);
         endfor;
     }

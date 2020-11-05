@@ -17,14 +17,18 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/tiny', function () {
+    return view('article-form');
+});
+
 //Summer Note
 // Route::get('img','ArticleController@index');
 // Route::post('img-upl','ArticleController@store');
 
 //tinyMCE
-// Route::post('/save-article','API\ArticleController@storeArticle')->name('store.article');
+Route::post('/save-article','API\ArticleController@store')->name('store.article');
 // Route::get('/article/{id}','API\ArticleController@showArticle')->name('show.article');
 // Route::post('/article/img-upload', 'ArticleController@storeImg')->name('storeImg'); 
-Route::post('/file-upload', 'FileController@upload');
+// Route::post('/file-upload', 'FileController@upload');
 ?>
 

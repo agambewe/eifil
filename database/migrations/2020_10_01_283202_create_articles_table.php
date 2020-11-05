@@ -25,7 +25,7 @@ class CreateArticlesTable extends Migration
             $table->foreign('id_author')
                 ->references('id')
                 ->on('authors');
-            $table->string('hastag')->nullable();
+            $table->string('hashtag')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

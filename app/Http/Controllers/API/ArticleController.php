@@ -3,15 +3,17 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Article;
+use App\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Response;
 use Validator;
 
 class ArticleController extends Controller
 {
     public function __construct() {
-        // $this->middleware('auth:api', ['except' => ['login', 'register']]);
-        $this->middleware('auth:api');
+        $this->middleware('auth:api', ['except' => ['show', 'find', 'findImage', 'findByCategory']]);
+        // $this->middleware('auth:api');
     }
 
     public function show()
@@ -19,19 +21,115 @@ class ArticleController extends Controller
         return Article::with(['detailAuthor', 'detailCategory'])->get();
     }
 
-    public function find($id){
-        $data = Article::find($id);
+    public function trash()
+    {
+        return Article::onlyTrashed()->with(['detailAuthor', 'detailCategory'])->get();
+    }
 
-        if (is_null($data)){
+    public function trashFind($id){
+        $article = Article::onlyTrashed()->where('id',$id);
+
+        if (is_null($article)){
             $res['message'] = "Failed!";
             return response($res);
         }else{
-            $res['message'] = "Success!";
+            if($article->restore()){
+                $res['message'] = "Data has been successfully restored!";
+                $res['data'] = $article;
+                return response($res);
+            }else{
+                $res['errors'] = "Failed";
+                return response($res);
+            }
+        }
+    }
+
+    public function trashRestore(){
+        $article = Article::onlyTrashed();
+
+        if (is_null($article)){
+            $res['message'] = "Failed!";
+            return response($res);
+        }else{
+            if($article->restore()){
+                $res['message'] = "Data has been successfully restored!";
+                $res['data'] = $article;
+                return response($res);
+            }else{
+                $res['errors'] = "Failed!";
+                return response($res);
+            }
+        }
+    }
+
+    public function trashEmpty(){
+        $article = Article::onlyTrashed();
+
+        if (is_null($article)){
+            $res['message'] = "Failed!";
+            return response($res);
+        }else{
+            if($article->forceDelete()){
+                $res['message'] = "Data has been successfully Deleted!";
+                $res['data'] = $article;
+                return response($res);
+            }else{
+                $res['errors'] = "Failed!";
+                return response($res);
+            }
+        }
+    }
+    
+    public function find($id){
+        $data = Article::with(['detailAuthor', 'detailCategory'])
+                    ->find($id);
+
+        if (is_null($data)){
+            $res['errors'] = "Failed!";
+            return response($res);
+        }else{
+            $res['message'] = "Data has been successfully fetched!";
             $res['data'] = $data;
             return response($res);
         }
     }
 
+    public function findByCategory($id){
+        $datas = Article::with(['detailAuthor', 'detailCategory'])
+                    ->whereIn('id_category',array($id))->get();
+
+        foreach($datas as $data){
+            preg_match( '@src="([^"]+)"@' , $data->description, $match );
+            $src = array_pop($match);
+            $data->image = $src;
+        }
+
+        if (is_null($datas)){
+            $res['errors'] = "Failed!";
+            return response($res);
+        }else{
+            $res['message'] = "Data has been successfully fetched!";
+            $res['data'] = $datas;
+            return response($res);
+        }
+    }
+
+    public function findImage($id){
+        $data = Article::find($id)->description;
+        preg_match( '@src="([^"]+)"@' , $data, $match );
+        $src = array_pop($match);
+
+        if(!$src){
+            $res['message'] = "Data has been successfully fetched!";
+            $res['data'] = "null";
+            return response($res);
+        }else{
+            $res['message'] = "Data has been successfully fetched!";
+            $res['data'] = $src;
+            return response($res);
+        }
+    }
+    
     public function store(Request $request)
     {
         $input_data = $request->all();
@@ -41,7 +139,7 @@ class ArticleController extends Controller
             'description' => 'required',
             'id_author' => 'required',
             'id_category' => 'required',
-            'hastag' => 'required'
+            'hashtag' => 'required'
         ]);
 
         if ($validation->fails()) {
@@ -53,13 +151,13 @@ class ArticleController extends Controller
         $article->description = $input_data['description'];
         $article->id_author = $input_data['id_author'];
         $article->id_category = $input_data['id_category'];
-        $article->hastag = $input_data['hastag'];
+        $article->hashtag = $input_data['hashtag'];
 
         if($article->save()){
-            $res['message'] = "Successfully create!";
+            $res['message'] = "Data has been successfully created!";
             return response($res);
         }else{
-            $res['message'] = "Create failed!";
+            $res['errors'] = "Failed!";
             return response($res);
         }
     }
@@ -73,7 +171,7 @@ class ArticleController extends Controller
             'description' => 'required',
             'id_author' => 'required',
             'id_category' => 'required',
-            'hastag' => 'required'
+            'hashtag' => 'required'
         ]);
 
         if ($validation->fails()) {
@@ -84,20 +182,20 @@ class ArticleController extends Controller
         $description = $input_data['description'];
         $id_author = $input_data['id_author'];
         $id_category = $input_data['id_category'];
-        $hastag = $input_data['hastag'];
+        $hashtag = $input_data['hashtag'];
 
         $data = Article::where('id',$id)->first();
         $data->title = $title;
         $data->description = $description;
         $data->id_author = $id_author;
         $data->id_category = $id_category;
-        $data->hastag = $hastag;
+        $data->hashtag = $hashtag;
 
         if($data->save()){
-            $res['message'] = "Data article berhasil diubah!";
+            $res['message'] = "Data has been successfully updated!";
             return response($res);
         }else{
-            $res['message'] = "Data article gagal diubah!";
+            $res['errors'] = "Failed!";
             return response($res);
         }
     }
@@ -105,13 +203,111 @@ class ArticleController extends Controller
     public function delete(Request $request, $id)
     {
         $data = Article::where('id',$id)->first();
-
+        
         if($data->delete()){
-            $res['message'] = "Data article berhasil dihapus!";
+            $res['message'] = "Data has been successfully deleted!";
             return response($res);
         }
         else{
-            $res['message'] = "Data article gagal dihapus!";
+            $res['errors'] = "Failed!";
+            return response($res);
+        }
+    }
+
+    public function deleteAll()
+    {
+        $del = Article::whereNull('deleted_at')->delete();
+        if($del){
+            $res['message'] = "Data has been successfully deleted!";
+            return response($res);
+        }
+        else{
+            $res['errors'] = "Failed!";
+            return response($res);
+        }
+    }
+
+    public function deleteAllConfirm(Request $request)
+    {
+        $validation = Validator::make($request->all(), [
+            'id' => 'required',
+            'password' => 'required|string',
+        ]);
+
+        if ($validation->fails()) {
+            return response()->json(['errors' => $validation->errors()], 422);
+        }
+
+        $id = $request->input('id');
+
+        $data = User::where('id',$id)->first();
+        if(is_null($data)){
+            $res['message'] = "Failed!";
+            return response($res);
+        }else{
+            if(!Hash::check($request->input('password'), $data->password)){
+                $res['errors'] = "Wrong Password!";
+                return response($res, 422);
+            }else{
+                $this->deleteAll();
+                $res['message'] = "Data has been successfully deleted!";
+                return response($res);  
+            }
+        }
+        $res['errors'] = "Wrong id!";
+        return response($res);
+    }
+
+    public function trashDelete(Request $request, $id)
+    {
+        $data = Article::onlyTrashed()->where('id',$id)->first();
+
+        if($data->forceDelete()){
+            $res['message'] = "Data has been successfully deleted!";
+            return response($res);
+        }
+        else{
+            $res['errors'] = "Failed!";
+            return response($res);
+        }
+    }
+
+    public function multipleDelete(Request $request)
+    {
+        $validation = Validator::make($request->all(), [
+            'id' => 'required',
+        ]);
+
+        $checked = $request->input('id');
+
+        if(Article::destroy($checked)){
+            $res['message'] = "Data has been successfully deleted!";
+            return response($res);
+        }
+        else{
+            $res['errors'] = "Failed!";
+            return response($res);
+        }
+    }
+
+    public function multipleDeleteTrash(Request $request)
+    {
+        $validation = Validator::make($request->all(), [
+            'id' => 'required',
+        ]);
+
+        $checked = $request->input('id');
+
+        $forceDelete = Article::onlyTrashed()
+                ->whereIn('id', $checked)
+                ->forceDelete();
+
+        if($forceDelete){
+            $res['message'] = "Data has been successfully deleted!";
+            return response($res);
+        }
+        else{
+            $res['errors'] = "Failed!";
             return response($res);
         }
     }
@@ -121,13 +317,14 @@ class ArticleController extends Controller
         // Allowed the origins to upload 
         // $accepted_origins = array("http://localhost", "https://techarise.com/");
         // Images upload dir path
-        $imgFolder = public_path() . "/uploads/";
+        // $imgFolder = public_path() . "/uploads/";
+        $imgFolder = "/home/eifilin1/api.eifil-indonesia.org/uploads/";
         reset($_FILES);
         $tmp = current($_FILES);
         if(is_uploaded_file($tmp['tmp_name'])){
             if(isset($_SERVER['HTTP_ORIGIN'])){
                 // if(in_array($_SERVER['HTTP_ORIGIN'], $accepted_origins)){
-                    header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
+                    // header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
                 // }else{
                 //     header("HTTP/1.1 403 Origin Denied");
                 //     return;

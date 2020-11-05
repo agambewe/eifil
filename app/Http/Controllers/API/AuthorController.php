@@ -18,15 +18,74 @@ class AuthorController extends Controller
     {
         return Author::all();
     }
+
+    public function trash()
+    {
+        return Author::onlyTrashed()->get();
+    }
+
+    public function trashFind($id){
+        $author = Author::onlyTrashed()->where('id',$id);
+
+        if (is_null($author)){
+            $res['message'] = "Failed!";
+            return response($res);
+        }else{
+            if($author->restore()){
+                $res['message'] = "Data has been successfully restored!";
+                $res['data'] = $author;
+                return response($res);
+            }else{
+                $res['errors'] = "Failed!";
+                return response($res);
+            }
+        }
+    }
+
+    public function trashRestore(){
+        $author = Author::onlyTrashed();
+
+        if (is_null($author)){
+            $res['errors'] = "Failed!";
+            return response($res);
+        }else{
+            if($author->restore()){
+                $res['message'] = "Data has been successfully restored!";
+                $res['data'] = $author;
+                return response($res);
+            }else{
+                $res['errors'] = "Failed!";
+                return response($res);
+            }
+        }
+    }
+
+    public function trashEmpty(){
+        $author = Author::onlyTrashed();
+
+        if (is_null($author)){
+            $res['errors'] = "Failed!";
+            return response($res);
+        }else{
+            if($author->forceDelete()){
+                $res['message'] = "Data has been successfully deleted!";
+                $res['data'] = $author;
+                return response($res);
+            }else{
+                $res['errors'] = "Failed!";
+                return response($res);
+            }
+        }
+    }
     
     public function find($id){
         $data = Author::find($id);
 
         if (is_null($data)){
-            $res['message'] = "Failed!";
+            $res['errors'] = "Failed!";
             return response($res);
         }else{
-            $res['message'] = "Success!";
+            $res['message'] = "Data has been successfully fetched!";
             $res['data'] = $data;
             return response($res);
         }
@@ -37,7 +96,7 @@ class AuthorController extends Controller
         $input_data = $request->all();
 
         $validation = Validator::make($input_data, [
-            'name' => 'required'
+            'name' => 'required|unique:authors'
         ]);
 
         if ($validation->fails()) {
@@ -48,10 +107,11 @@ class AuthorController extends Controller
         $author->name = $input_data['name'];
 
         if($author->save()){
-            $res['message'] = "Successfully create!";
+            $res['message'] = "Data has been successfully created!";
+            $res['data'] = $author;
             return response($res);
         }else{
-            $res['message'] = "Create failed!";
+            $res['errors'] = "Failed!";
             return response($res);
         }
     }
@@ -74,10 +134,10 @@ class AuthorController extends Controller
         $data->name = $name;
 
         if($data->save()){
-            $res['message'] = "Successfully!";
+            $res['message'] = "Data has been successfully updated!";
             return response($res);
         }else{
-            $res['message'] = "Failed!";
+            $res['errors'] = "Failed!";
             return response($res);
         }
     }
@@ -87,11 +147,29 @@ class AuthorController extends Controller
         $data = Author::where('id',$id)->first();
 
         if($data->delete()){
-            $res['message'] = "Successfully!";
+            $res['message'] = "Data has been successfully deleted!";
             return response($res);
         }
         else{
-            $res['message'] = "Failed!";
+            $res['errors'] = "Failed!";
+            return response($res);
+        }
+    }
+
+    public function multipleDelete(Request $request)
+    {
+        $this->validate($request, [
+            'id' => 'required',
+        ]);
+
+        $checked = $request->input('id');
+
+        if(Author::destroy($checked)){
+            $res['message'] = "Data has been successfully deleted!";
+            return response($res);
+        }
+        else{
+            $res['errors'] = "Failed!";
             return response($res);
         }
     }
