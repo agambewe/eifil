@@ -12,13 +12,26 @@ use Validator;
 class ArticleController extends Controller
 {
     public function __construct() {
-        $this->middleware('auth:api', ['except' => ['show', 'find', 'findImage', 'findByCategory']]);
+        $this->middleware('auth:api', ['except' => ['show', 'find', 'findImage', 'findByCategory', 'findByAuthor', 'findByHashtag', 'topByHashtag']]);
         // $this->middleware('auth:api');
     }
 
     public function show()
     {
-        return Article::with(['detailAuthor', 'detailCategory'])->get();
+        $datas = Article::with(['detailAuthor', 'detailCategory'])
+                    ->orderBy('created_at', 'DESC')
+                    ->get();
+        foreach($datas as $data){
+            preg_match( '@src="([^"]+)"@' , $data->description, $match );
+            $src = array_pop($match);
+            $data->image = $src;
+        }
+
+        if (is_null($datas)){
+            return response("Failed!");
+        }else{
+            return response($datas);
+        }
     }
 
     public function trash()
@@ -88,9 +101,15 @@ class ArticleController extends Controller
             $res['errors'] = "Failed!";
             return response($res);
         }else{
-            $res['message'] = "Data has been successfully fetched!";
-            $res['data'] = $data;
-            return response($res);
+            $data->view_count++;
+            if($data->save()){
+                $res['message'] = "Data has been successfully fetched!";
+                $res['data'] = $data;
+                return response($res);
+            }else{
+                $res['errors'] = "Failed!";
+                return response($res);
+            }
         }
     }
 
@@ -110,6 +129,83 @@ class ArticleController extends Controller
         }else{
             $res['message'] = "Data has been successfully fetched!";
             $res['data'] = $datas;
+            return response($res);
+        }
+    }
+
+    public function findByAuthor($id){
+        $datas = Article::with(['detailAuthor', 'detailCategory'])
+                    ->whereIn('id_author',array($id))
+                    ->orderBy('description', 'ASC')
+                    ->get();
+
+        foreach($datas as $data){
+            preg_match( '@src="([^"]+)"@' , $data->description, $match );
+            $src = array_pop($match);
+            $data->image = $src;
+        }
+
+        if (is_null($datas)){
+            $res['errors'] = "Failed!";
+            return response($res);
+        }else{
+            $res['message'] = "Data has been successfully fetched!";
+            $res['data'] = $datas;
+            return response($res);
+        }
+    }
+
+    public function findByHashtag($hashtag){
+        $datas = Article::with(['detailAuthor', 'detailCategory'])
+                    ->orWhere('hashtag', 'like', '%' . $hashtag . '%')
+                    ->orderBy('view_count', 'DESC')
+                    ->get();
+
+        foreach($datas as $data){
+            preg_match( '@src="([^"]+)"@' , $data->description, $match );
+            $src = array_pop($match);
+            $data->image = $src;
+        }
+
+        if (is_null($datas)){
+            $res['errors'] = "Failed!";
+            return response($res);
+        }else{
+            $res['message'] = "Data has been successfully fetched!";
+            $res['data'] = $datas;
+            return response($res);
+        }
+    }
+
+    public function topByHashtag($id){
+        $data = Article::find($id)->hashtag;
+        $data = str_replace("#","",$data);
+        $pieces = explode(",", $data);
+        
+        $top = Article::where(function($query) use ($pieces){
+            foreach($pieces as $piece){
+                $query = $query->orWhere('hashtag', 'LIKE', "%$piece%");
+            }
+            return $query;
+        });
+        $results = $top->with(['detailAuthor', 'detailCategory'])
+                    ->where('id', '<>', $id)
+                    ->orderBy('view_count', 'DESC')
+                    ->take(4)
+                    ->get();
+
+        foreach($results as $result){
+            preg_match( '@src="([^"]+)"@' , $result->description, $match );
+            $src = array_pop($match);
+            $result->image = $src;
+        }
+
+        if (is_null($results)){
+            $res['errors'] = "Failed!";
+            return response($res);
+        }else{
+            $res['message'] = "Data has been successfully fetched!";
+            $res['data'] = $results;
             return response($res);
         }
     }

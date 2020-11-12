@@ -144,8 +144,12 @@ class AuthorController extends Controller
 
     public function delete(Request $request, $id)
     {
-        $data = Author::where('id',$id)->first();
+        $author = Author::has('articles')->find($id);
+        if($author){
+            return response()->json(['errors' => "Author has been used on article!"], 422);
+        }
 
+        $data = Author::where('id',$id)->first();
         if($data->delete()){
             $res['message'] = "Data has been successfully deleted!";
             return response($res);
@@ -163,6 +167,13 @@ class AuthorController extends Controller
         ]);
 
         $checked = $request->input('id');
+
+        foreach ($checked as $relationCheck) {
+            $relations = Author::has('articles')->find($relationCheck);
+            if($relations){
+                return response()->json(['errors' => "Author has been used on article!"], 422);
+            }
+        }
 
         if(Author::destroy($checked)){
             $res['message'] = "Data has been successfully deleted!";

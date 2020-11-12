@@ -26,6 +26,7 @@ class CreateArticlesTable extends Migration
                 ->references('id')
                 ->on('authors');
             $table->string('hashtag')->nullable();
+            $table->integer('view_count')->default('1');
             $table->timestamps();
             $table->softDeletes();
         });

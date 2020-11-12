@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Category;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Response;
 use Validator;
 
@@ -16,7 +17,7 @@ class CategoryController extends Controller
     
     public function show()
     {
-        return Category::all();
+        return Category::orderBy('name', 'ASC')->get();
     }
 
     public function trash()
@@ -147,8 +148,7 @@ class CategoryController extends Controller
         
         $category = Category::has('articles')->find($id);
         if($category){
-            $res['message'] = "Category has been used on article!";
-            return response($res);
+            return response()->json(['errors' => "Category has been used on article!"], 422);
         }
 
         $data = Category::where('id',$id)->first();
@@ -187,8 +187,7 @@ class CategoryController extends Controller
         foreach ($checked as $relationCheck) {
             $relations = Category::has('articles')->find($relationCheck);
             if($relations){
-                $res['message'] = "Category has been used on article!";
-                return response($res);
+                return response()->json(['errors' => "Category has been used on article!"], 422);
             }
         }
 

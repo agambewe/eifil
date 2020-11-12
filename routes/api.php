@@ -33,6 +33,9 @@ Route::group(['middleware' => 'api', 'prefix' => 'V1'], function ($router) {
     Route::get('/article/{id}', 'API\ArticleController@find');
     Route::get('/article-image/{id}', 'API\ArticleController@findImage');
     Route::get('/article-by-category/{id}', 'API\ArticleController@findByCategory');
+    Route::get('/article-by-author/{id}', 'API\ArticleController@findByAuthor');
+    Route::get('/article-by-hashtag/{id}', 'API\ArticleController@findByHashtag');
+    Route::get('/article-relate-top/{id}', 'API\ArticleController@topByHashtag');
     Route::post('/article/{id}','API\ArticleController@update');
     Route::delete('/article/{id}', 'API\ArticleController@delete');
     Route::get('/article-trash','API\ArticleController@trash');
